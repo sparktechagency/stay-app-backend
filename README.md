@@ -65,7 +65,15 @@ Ensure you have the following installed:
    yarn install
    ```
 
-3. **Create a `.env` file:**
+3. **For use Docker up:**
+
+   Use Docker Compose:
+
+   ```bash
+   docker compose up
+   ```
+
+4. **Create a `.env` file:**
 
    In the root directory of the project, create a `.env` file and add the following variables. Adjust the values according to your setup.
 
@@ -96,7 +104,7 @@ Ensure you have the following installed:
 
    ```
 
-4. **Run the project:**
+5. **Run the project:**
 
    Using npm:
 
