@@ -14,7 +14,7 @@
     "docker-app": "docker-compose -f docker-compose.app.yaml up --build",
     "docker-infra": "docker-compose -f docker-compose.infra.yaml up --build -d",
     "create-module": "ts-node ./src/gm.ts",
-    "init-load":"ts-node ./src/load-balancer.conf.ts",
+    "init-load": "ts-node ./src/load-balancer.conf.ts",
     "build": "tsc",
     "start": "node dist/server.js"
   },
@@ -42,6 +42,7 @@
   },
   "dependencies": {
     "@elastic/elasticsearch": "^8.19.1",
+    "axios": "^1.13.2",
     "bcrypt": "^5.1.1",
     "colors": "^1.4.0",
     "cors": "^2.8.5",

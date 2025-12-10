@@ -2,82 +2,177 @@ import * as fs from "fs";
 import * as path from "path";
 import yaml from "js-yaml";
 
-const APP_MODULES_PATH = path.join(process.cwd(), "src", "app", "modules");
-const DOCKER_COMPOSE_PATH = path.join(process.cwd(), "docker-compose.app.yaml");
-const KONG_YAML_PATH = path.join(process.cwd(), "kong.yaml");
+const ROOT = process.cwd();
+const MODULES_DIR = path.join(ROOT, "src", "app", "modules");
+const DOCKER_COMPOSE_APP = path.join(ROOT, "docker-compose.app.yaml");
+const KONG_YAML = path.join(ROOT, "kong.yaml");
 
-async function generateDockerAndKongServices() {
-  // 1️⃣ Read modules folder
-  const modules = fs.readdirSync(APP_MODULES_PATH, { withFileTypes: true })
-    .filter(dirent => dirent.isDirectory())
-    .map(dirent => dirent.name);
+// config for port allocation
+const BASE_PORT = 5001; // starting port for modules
+const MAX_PORT = 5999;
 
-  // 2️⃣ Load existing docker-compose.app.yaml
-  let dockerCompose: any = { version: "3.9", services: {}, networks: { "template-network": { external: true } } };
-  if (fs.existsSync(DOCKER_COMPOSE_PATH)) {
-    dockerCompose = yaml.load(fs.readFileSync(DOCKER_COMPOSE_PATH, "utf8")) || dockerCompose;
+function loadYaml(filePath: string): any {
+  if (!fs.existsSync(filePath)) return null;
+  const txt = fs.readFileSync(filePath, "utf8");
+  return yaml.load(txt);
+}
+
+function saveYaml(filePath: string, obj: any) {
+  const txt = yaml.dump(obj, { noRefs: true, sortKeys: false });
+  fs.writeFileSync(filePath, txt, "utf8");
+}
+
+function listModuleNames(): string[] {
+  if (!fs.existsSync(MODULES_DIR)) return [];
+  return fs.readdirSync(MODULES_DIR, { withFileTypes: true })
+    .filter(d => d.isDirectory())
+    .map(d => d.name)
+    .filter(Boolean);
+}
+
+function findUsedPorts(compose: any): Set<number> {
+  const used = new Set<number>();
+  if (!compose?.services) return used;
+  Object.values(compose.services).forEach((svc: any) => {
+    if (!svc.ports) return;
+    svc.ports.forEach((p: string) => {
+      // p formats: "5001:5001" or "10.10.7.9:5001:5001"
+      const parts = p.split(":");
+      const hostPort = parseInt(parts[parts.length - 1], 10);
+      if (!isNaN(hostPort)) used.add(hostPort);
+    });
+  });
+  return used;
+}
+
+function findServiceInKong(kong: any, name: string) {
+  if (!kong?.services) return null;
+  return kong.services.find((s: any) => s.name === name);
+}
+
+function findServiceInCompose(compose: any, name: string) {
+  if (!compose?.services) return null;
+  return compose.services[name];
+}
+
+function nextAvailablePort(used: Set<number>): number {
+  for (let p = BASE_PORT; p <= MAX_PORT; p++) {
+    if (!used.has(p)) return p;
+  }
+  throw new Error("No available ports");
+}
+
+async function run() {
+  const modules = listModuleNames().map(m=>m.toLowerCase());
+  console.log("Found modules:", modules);
+
+  // load compose (or create base skeleton)
+  let compose = loadYaml(DOCKER_COMPOSE_APP);
+  if (!compose) {
+    compose = {
+      version: "3.9",
+      services: {},
+      networks: { "template-network": { external: true } },
+    };
+  } else {
+    // ensure skeleton keys exist
+    compose.services = compose.services || {};
+    compose.networks = compose.networks || { "template-network": { external: true } };
   }
 
-  // 3️⃣ Load existing kong.yaml
-  let kongConfig: any = { _format_version: "3.0", services: [] };
-  if (fs.existsSync(KONG_YAML_PATH)) {
-    kongConfig = yaml.load(fs.readFileSync(KONG_YAML_PATH, "utf8")) || kongConfig;
+  // load kong
+  let kong = loadYaml(KONG_YAML);
+  if (!kong) {
+    kong = { _format_version: "3.0", services: [] };
+  } else {
+    kong.services = kong.services || [];
   }
 
-  const excludeModules = ["resetToken"];
+  // compute used ports (keep them)
+  const usedPorts = findUsedPorts(compose);
 
-  // 4️⃣ For each module, add docker service and kong service if not exist
-  modules.forEach(moduleName => {
-    if(excludeModules.includes(moduleName)) return;
-    
-    const serviceName = `${moduleName}-service`.toLowerCase();
-    const modulePort = 5000 + Math.floor(Math.random() * 1000); // dynamic port, just example
-
-    // Docker service
-    if (!dockerCompose.services[serviceName]) {
-      dockerCompose.services[serviceName] = {
-        build: ".",
-        ports: [`${modulePort}:${modulePort}`],
-        environment: [
-          `PORT=${modulePort}`,
-        //   `DATABASE_URL=mongodb://mongo:27017/embay`,
-        //   `BACKUP_DATABASE_URL=mongodb://mongo:27017/embay`,
-        //   `REDIS_HOST=redis`,
-        //   `REDIS_PORT=6379`,
-        //   `KAFKA_URL=kafka:9092`,
-        //   `ELASTICSEARCH_URL=http://elasticsearch:9200`,
-        ],
-        networks: ["template-network"],
-        depends_on: ["kong"],
-        volumes: ["shared-data:/app/uploads"],
-      };
-      console.log(`Added Docker service: ${serviceName} (port ${modulePort})`);
-    }
-
-    // Kong service
-    if (!kongConfig.services.find((s: any) => s.name === serviceName)) {
-      kongConfig.services.push({
-        name: serviceName,
-        url: `http://${serviceName}:${modulePort}/api/v1/${moduleName}`,
-        routes: [
-          {
-            name: `${moduleName}-route`,
-            paths: [`/api/v1/${moduleName}`],
-          },
-        ],
-      });
-      console.log(`Added Kong service: ${serviceName}`);
+  // keep a map of module->port from existing services to preserve assigned ports
+  const modulePorts = new Map<string, number>();
+  Object.entries(compose.services).forEach(([svcName, svcDef]: any) => {
+    // expected svcName format: <module>-service
+    if (typeof svcName === "string" && svcName.endsWith("-service")) {
+      const moduleName = svcName.replace(/-service$/, "");
+      if (svcDef.ports && svcDef.ports.length > 0) {
+        const pStr = svcDef.ports[0];
+        const parts = pStr.split(":");
+        const hostPort = parseInt(parts[parts.length - 1], 10);
+        if (!isNaN(hostPort)) {
+          modulePorts.set(moduleName, hostPort);
+        }
+      }
     }
   });
 
-  // 5️⃣ Write updated docker-compose.app.yaml
-  fs.writeFileSync(DOCKER_COMPOSE_PATH, yaml.dump(dockerCompose), "utf8");
+  // ensure deterministic port allocation for new modules
+  const excludeMods = ['resettoken']
+  modules.forEach(mod => {
+    if(excludeMods.includes(mod)) return
+    const svcName = `${mod}-service`;
+    if (!findServiceInCompose(compose, svcName)) {
+      // assign port: reuse if exists in modulePorts else find next available
+      let port = 5100+Math.floor(Math.random() * 1000);
+      if (!port) {
+        port = nextAvailablePort(usedPorts);
+      }
+      usedPorts.add(port);
 
-  // 6️⃣ Write updated kong.yaml
-  fs.writeFileSync(KONG_YAML_PATH, yaml.dump(kongConfig), "utf8");
+      // create service
+      compose.services[svcName] = {
+        build: ".",
+        ports: [`${port}:${port}`],
+        environment: [
+          `PORT=${port}`,
+          `DATABASE_URL=mongodb://mongo:27017/embay`,
+          `BACKUP_DATABASE_URL=mongodb://mongo:27017/embay`,
+          `REDIS_HOST=redis`,
+          `REDIS_PORT=6379`,
+          `KAFKA_URL=kafka:9092`,
+          `ELASTICSEARCH_URL=http://elasticsearch:9200`,
+          `IP_ADDRESS=0.0.0.0`,
+        ],
+        networks: ["template-network"],
+      };
+      console.log(`Added ${svcName} -> port ${port}`);
+    } else {
+      console.log(`${svcName} already exists — preserved`);
+    }
 
-  console.log("Docker Compose and Kong config updated successfully!");
+    // kong entry
+    if (!findServiceInKong(kong, `${mod}-service`)) {
+      // determine port for kong url (from compose)
+      const svc = compose.services[`${mod}-service`];
+      const pstr = svc.ports && svc.ports.length > 0 ? svc.ports[0] : `${BASE_PORT}:${BASE_PORT}`;
+      const parts = pstr.split(":");
+      const hostPort = parseInt(parts[parts.length - 1], 10);
+      kong.services.push({
+        name: `${mod}-service`,
+        url: `http://${mod}-service:${hostPort}/api/v1/${mod}`,
+        routes: [
+          {
+            name: `${mod}-route`,
+            paths: [`/api/v1/${mod}`],
+          },
+        ],
+      });
+      console.log(`Added kong service for ${mod}-service`);
+    } else {
+      console.log(`kong service for ${mod}-service exists — preserved`);
+    }
+  });
+
+  // Write back the files
+  saveYaml(DOCKER_COMPOSE_APP, compose);
+  saveYaml(KONG_YAML, kong);
+
+  console.log("docker-compose.app.yml and kong.yaml updated.");
 }
 
-// Run
-generateDockerAndKongServices().catch(console.error);
+run().catch(err => {
+  console.error("Error:", err);
+  process.exit(1);
+});

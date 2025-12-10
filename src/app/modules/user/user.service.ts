@@ -8,10 +8,19 @@ import unlinkFile from '../../../shared/unlinkFile';
 import generateOTP from '../../../util/generateOTP';
 import { IUser } from './user.interface';
 import { User } from './user.model';
+import { AuthHelper } from '../auth/auth.helper';
+import { Response } from 'express';
 
-const createUserToDB = async (payload: Partial<IUser>): Promise<IUser> => {
-  //set role
-  payload.role = USER_ROLES.USER;
+const createUserToDB = async (payload: Partial<IUser>,res:Response) => {
+  const isExist = await User.findOne({ email: payload.email });
+  if (isExist) {
+    if(isExist.status === 'delete') throw new ApiError(StatusCodes.BAD_REQUEST, 'You don’t have permission to access this content.It looks like your account has been deactivated.');
+    if(!isExist.verified){
+      return await AuthHelper.unverifiedAccountHandle(payload.email!,res);
+    }
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Email already exist!');
+
+  }
   const createUser = await User.create(payload);
   if (!createUser) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Failed to create user');

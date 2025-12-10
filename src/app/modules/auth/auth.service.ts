@@ -16,9 +16,11 @@ import cryptoToken from '../../../util/cryptoToken';
 import generateOTP from '../../../util/generateOTP';
 import { ResetToken } from '../resetToken/resetToken.model';
 import { User } from '../user/user.model';
+import { Response } from 'express';
+import { AuthHelper } from './auth.helper';
 
 //login
-const loginUserFromDB = async (payload: ILoginData) => {
+const loginUserFromDB = async (payload: ILoginData,res:Response) => {
   const { email, password } = payload;
   const isExistUser = await User.findOne({ email }).select('+password');
   if (!isExistUser) {
@@ -27,10 +29,7 @@ const loginUserFromDB = async (payload: ILoginData) => {
 
   //check verified and status
   if (!isExistUser.verified) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'Please verify your account, then try to login again'
-    );
+   return await AuthHelper.unverifiedAccountHandle(email,res);
   }
 
   //check user status
