@@ -70,12 +70,14 @@ if (!moduleName) {
  * @param camelCaseName - The camelCase name of the module (used for route import/export).
  */
 function updateRouterFile(folderName: string, camelCaseName: string): void {
-    const routerPath = path.join(__dirname, 'app/routes', 'index.ts');
+    const routerPath = path.join(process.cwd(), 'src/routes', 'index.ts');
+    
     const routeImport = `import { ${camelCaseName}Routes } from '../app/modules/${folderName}/${folderName}.route';`;
     const routeEntry = `{ path: '/${folderName}', route: ${camelCaseName}Routes }`;
 
     let routerFileContent = fs.readFileSync(routerPath, 'utf-8');
 
+    
     // Check if the import statement is already present
     if (!routerFileContent.includes(routeImport)) {
         routerFileContent = `${routeImport}\n${routerFileContent}`;
@@ -86,6 +88,7 @@ function updateRouterFile(folderName: string, camelCaseName: string): void {
         /export const apiRoutes: \{ path: string; route: any \}\[] = \[(.*?)\]/
     const match = routerFileContent.match(apiRoutesRegex);
 
+    
     if (match) {
         const currentRoutes = match[1].trim();
         if (!currentRoutes.includes(routeEntry)) {
@@ -98,6 +101,7 @@ function updateRouterFile(folderName: string, camelCaseName: string): void {
             );
         }
     } else {
+
         console.error(
             'Failed to find apiRoutes array. Ensure the app.ts file has a properly defined apiRoutes array.',
         );

@@ -1,7 +1,7 @@
 const axios = require("axios");
 
 const KONG_PROXY = process.env.KONG_PROXY || "http://kong:8000";
-const CHECK_PATHS = ["/","/files/4343"]; // try a few paths
+const CHECK_PATHS = ["/","/files/4343",]; // try a few paths
 
 async function ping() {
   for (const p of CHECK_PATHS) {
