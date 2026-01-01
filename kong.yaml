@@ -6,9 +6,15 @@ services:
       - name: default-route
         paths:
           - /
+        protocols:
+          - http
+          - https
   - name: asset-service
     url: http://asset-service:5043/files
     routes:
       - name: asset-route
         paths:
           - /files
+        protocols:
+          - http
+          - https

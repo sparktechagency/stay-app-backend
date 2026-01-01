@@ -44,7 +44,7 @@ export async function main() {
         // Start HTTP server
         const port = typeof config.port === 'number' ? config.port : Number(config.port);
         const server = app.listen(port, config.ip_address as string, () => {
-            logger.info(colors.bold.italic.bgWhite(`♻️ Worker ${process.pid} listening on ${config.ip_address}:${config.port}`));
+            logger.info(colors.bold.italic.bgGreen(`♻️ Worker ${process.pid} listening on ${config.ip_address}:${config.port}`));
         });
 
         // Setup Socket.IO

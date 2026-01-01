@@ -57,6 +57,8 @@ app.use('/api/v1', router);
 //live response
 app.get('/', (req: Request, res: Response) => {
   const date = new Date(Date.now());
+  const io = global.socketServer!
+  io.emit('message', 'Hello from the server!');
   res.send(
     `<h1 style="text-align:center; color:#173616; font-family:Verdana;">Beep-beep! The server is alive and kicking.</h1>
     <p style="text-align:center; color:#173616; font-family:Verdana;">${date}</p>

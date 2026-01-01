@@ -156,6 +156,7 @@ async function run() {
           {
             name: `${mod}-route`,
             paths: [`/api/v1/${mod}`],
+            protocols: ["http", "https"],
           },
         ],
       });
