@@ -8,7 +8,7 @@ import { errorLogger } from '../../shared/logger';
 import { IErrorMessage } from '../../types/errors.types';
 
 const globalErrorHandler: ErrorRequestHandler = (error, req, res, next) => {
-  config.node_env === 'development' ? console.log(error) : errorLogger.error(error);
+  // config.node_env === 'development' ? console.log(error) : errorLogger.error(error);
 
   let statusCode = 500;
   let message = 'Something went wrong';

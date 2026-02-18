@@ -3,10 +3,12 @@ import Stripe from "stripe";
 
 
 import stripe from "../config/stripe";
+import { Package } from "../app/modules/package/package.model";
+import { User } from "../app/modules/user/user.model";
+import { Subscription } from "../app/modules/subscription/subscription.model";
+import { getRandomId } from "../shared/getRandomId";
 
-const Package = "" as any
-const Subscription = "" as any
-const User = "" as any
+
 
 
 export const handleSubscriptionCreated = async (event: Stripe.Subscription) => {
@@ -15,12 +17,20 @@ export const handleSubscriptionCreated = async (event: Stripe.Subscription) => {
         mongooseSession.startTransaction();
         // console.log(event);
         
-        const subscription = await stripe.subscriptions.retrieve(event.id);
+        const subscription = await stripe.subscriptions.retrieve(event.id,{expand:["latest_invoice.payment_intent"]});
+        
         if(!subscription){
-            console.log("subscription not found");
-            return
+            throw new Error("Subscription not found");
         }
-        // console.log(subscription);
+        const invoice = subscription.latest_invoice as Stripe.Invoice
+        const item = invoice?.lines?.data[0];
+        if(!item){
+            throw new Error("Invoice not found");
+        }
+
+        const startDate = new Date(item.period.start * 1000);
+        const endDate = new Date(item.period.end * 1000);
+        
         
 
         const price_id = subscription?.items?.data[0]?.price.id;
@@ -28,15 +38,17 @@ export const handleSubscriptionCreated = async (event: Stripe.Subscription) => {
             console.log("price_id not found");
             return
         }
-        const packageData = await Package.findOne({price_id});
+        const packageData = await Package.findOne({priceId:price_id}).lean();
+        console.log(price_id);
+        
         if(!packageData){
-            console.log("package not found");
-            return
+            throw new Error("Package not found");
         }
         const customer = await stripe.customers.retrieve(subscription.customer as string);
+        
         if(!customer){
-            console.log("customer not found");
-            return
+            throw new Error("Customer not found");
+            
         }
 
         
@@ -45,8 +57,7 @@ export const handleSubscriptionCreated = async (event: Stripe.Subscription) => {
         const user = await User.findOne({email: (customer as any).email}).lean()
 
         if(!user){
-            console.log("user not found");
-            return
+            throw new Error("User not found");
         }
 
         const existingSubscription = await Subscription.findById(user.subscription)
@@ -55,11 +66,8 @@ export const handleSubscriptionCreated = async (event: Stripe.Subscription) => {
             await Subscription.findByIdAndUpdate(user.subscription,{status:"inactive"},{session:mongooseSession})
         }
 
-        const startDate = new Date();
-        const endDate = packageData.recurring =="week"? new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000):packageData.recurring=="month"? new Date(startDate.getTime() + 30 * 24 * 60 * 60 * 1000):new Date(startDate.getTime() + 365 * 24 * 60 * 60 * 1000)
-        
 
-        const newSubscription = await Subscription.create({
+        const newSubscription = await Subscription.create([{
             subscriptionId: event.id,
             status: "active",
             user: user._id,
@@ -67,18 +75,23 @@ export const handleSubscriptionCreated = async (event: Stripe.Subscription) => {
             startDate:startDate,
             endDate:endDate,
             price:packageData.price,
-        })
+            name:packageData.name,
+            txId:(event.latest_invoice as any)?.payment_intent as string || getRandomId('TRX',6)
+        }],{session:mongooseSession}) 
 
 
+        
+        
 
-
-        await User.findByIdAndUpdate(user._id,{subscription:newSubscription._id},{session:mongooseSession})
+      const udata=  await User.findByIdAndUpdate(user._id,{subscription:newSubscription[0]._id},{session:mongooseSession,new:true}).lean()
+    
+      
 
 
         await mongooseSession.commitTransaction()
         await mongooseSession.endSession()
 
-    
+    return newSubscription
         
     } catch (error) {
         await mongooseSession.abortTransaction()

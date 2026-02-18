@@ -38,5 +38,20 @@ export default {
   },
   elasticSearch: {
     url: process.env.ELASTICSEARCH_URL
+  },
+  redhawk: {
+    url: process.env.REDHAWK_URL,
+    user_id: process.env.REDHAWK_USER_ID,
+    api_key: process.env.REDHAWK_API_KEY
+  },
+  google:{
+    map_api_key: process.env.GOOGLE_MAP_API_KEY
+  },
+  apple:{
+    password: process.env.APPLE_PASSWORD
+  },
+  urls: {
+    frontend_url: process.env.FRONTEND_URL,
+    backend_url: process.env.BACKEND_URL
   }
 };

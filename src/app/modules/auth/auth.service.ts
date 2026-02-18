@@ -59,7 +59,9 @@ const loginUserFromDB = async (payload: ILoginData,res:Response) => {
     config.jwt.jwt_expire_in as string
   );
 
-  return { createToken };
+
+
+  return { accessToken: createToken,role:isExistUser.role,isSubscribed:isExistUser.subscription || null };
 };
 
 //forget password

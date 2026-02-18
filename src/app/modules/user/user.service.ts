@@ -12,6 +12,7 @@ import { AuthHelper } from '../auth/auth.helper';
 import { Response } from 'express';
 
 const createUserToDB = async (payload: Partial<IUser>,res:Response) => {
+  payload.role = USER_ROLES.USER
   const isExist = await User.findOne({ email: payload.email });
   if (isExist) {
     if(isExist.status === 'delete') throw new ApiError(StatusCodes.BAD_REQUEST, 'You don’t have permission to access this content.It looks like your account has been deactivated.');

@@ -56,6 +56,66 @@ const HKeyDelete = async (key: string) => {
   await redisClient.hdel(key, ...fields);
 };
 
+
+const pushToRedis = async (key: string, value: any) => {
+  await redisClient.lpush(key, JSON.stringify(value));
+}
+
+const popFromRedis = async (key: string) => {
+  const data = await redisClient.lpop(key);
+  return data ? JSON.parse(data) : null;
+}
+
+const getPaginatedData = async (key: string,query?: Record<string, any>) => {
+  if(!query){
+    // return all data
+    const data = await redisClient.lrange(key, 0, -1);
+    return data.map((item) => JSON.parse(item));
+  }else{
+     const limit = Number(query?.limit) || 10;
+    const page = Number(query?.page) || 1;
+
+    const start = (page - 1) * limit;
+    const end = start + limit - 1;
+
+    const rawData = await redisClient.lrange(key, start, end);
+    const data = rawData.map(item => JSON.parse(item));
+
+    const total = await redisClient.llen(key);
+    const totalPage = Math.ceil(total / limit);
+
+    return {
+      data,
+      meta: {
+        total,
+        limit,
+        page,
+        totalPage,
+      },
+    };
+  }
+}
+
+const redisGeoAdd = async (key: string, mamberKey:string,data:any[],options:{longitude:number,latitude:number}) => {
+  const {longitude,latitude} = options;
+  for(const item of data){
+    const exist = await redisClient.exists(`${mamberKey}:${item.id}`);
+    if(exist) continue;
+    await redisClient.set(`${mamberKey}:${item.id}`,JSON.stringify(item),'EX',60*60*24);
+    await redisClient.geoadd(key,longitude,latitude,`${mamberKey}:${item.id}`);
+  }
+}
+
+const redisGeoSearch = async (key: string,longitude:number,latitude:number,radius:number) => {
+  const data = await redisClient.georadius(key,longitude,latitude,radius,'km');
+  const getData = await Promise.all(data.map(async (item:any) => {
+    const data = await redisClient.get(item);
+    return data ? JSON.parse(data) : null;
+  }))
+
+  return getData
+}
+
 export const RedisHelper = {
   redisSet,
   redisGet,
@@ -63,4 +123,9 @@ export const RedisHelper = {
   redisHget,
   keyDelete,
   HKeyDelete,
+  pushToRedis,
+  popFromRedis,
+  getPaginatedData,
+  redisGeoAdd,
+  redisGeoSearch
 };
