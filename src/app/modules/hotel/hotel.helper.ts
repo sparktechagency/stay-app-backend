@@ -228,6 +228,15 @@ const getDataFromCacheGeoCode = async (lat: number,lng: number) => {
   return data
 }
 
+const getPriceWithCharge = (price: number) => {
+  const chargePercent = 10; // Example: 10% charge
+  const finalPrice = price + (price * chargePercent) / 100;
+  return {
+    price: finalPrice,
+    charge: (finalPrice - price).toFixed(2),
+  };
+}
+
 
 
 export const HotelHelper = {
@@ -237,5 +246,6 @@ export const HotelHelper = {
     formatHotelToAppJson,
     getBulkHotelsInfos,
     savedCacheData,
-    getDataFromCacheGeoCode
+    getDataFromCacheGeoCode,
+    getPriceWithCharge
 }

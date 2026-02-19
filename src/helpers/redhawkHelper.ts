@@ -54,7 +54,14 @@ class RedhawkHelper {
       {},
       payload,
     );
+  
+    
     const data: HotelSearchResponse = response?.data || {};
+
+    if (data.error) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, data.error as string);
+    }
+    
     return data?.data || { hotels: [], total_hotels: 0 };
   }
 
@@ -169,14 +176,12 @@ class RedhawkHelper {
   }
 
   async creditCardTokenizer(payload: PaymentRequest): Promise<any> {
-    console.log(payload);
-    return 
     const response = await axios.post('https://api.payota.net/api/public/v1/manage/init_partners', payload);
     const data = (response?.data || {})
     console.log(data);
     
     if(data.status === 'error') {
-      console.log(data.error);
+      console.log(data);
       
       throw new ApiError(StatusCodes.BAD_REQUEST, data.error as string);
     }

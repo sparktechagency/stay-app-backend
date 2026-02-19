@@ -6,7 +6,7 @@ export interface CreditCardCore {
 }
 
 export interface PaymentRequest {
-  object_id: number;
+  object_id: string;
   pay_uuid: string;
   init_uuid: string;
   user_first_name: string;

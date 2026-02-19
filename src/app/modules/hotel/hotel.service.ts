@@ -16,7 +16,6 @@ import { PaymentRequest } from '../../../types/redhawk/startBooking';
 const searchHotelsUsingGeoCode = async (data:HotelSearchRequest,user:JwtPayload) => {
     const cache = await RedisHelper.redisGet('hotels', data);
     if(cache) return cache
-    const address = await googleMapHelper.getAddressUsingGeoCode(data.lat, data.lng);
     const destinationLatLong = await googleMapHelper.getGeoCodeUsingAddress(data.destination);
 
     if(destinationLatLong.lat == 0 || destinationLatLong.lng == 0) {
@@ -24,7 +23,7 @@ const searchHotelsUsingGeoCode = async (data:HotelSearchRequest,user:JwtPayload)
     }
 
     const cehcedData = await HotelHelper.getDataFromCacheGeoCode(destinationLatLong.lat,destinationLatLong.lng)
-    if(cehcedData) {
+    if(cehcedData?.length) {
         await RedisHelper.redisSet('hotels', cehcedData, data, 60 * 60 * 24);
         return cehcedData
     }
@@ -32,7 +31,7 @@ const searchHotelsUsingGeoCode = async (data:HotelSearchRequest,user:JwtPayload)
     const hotels = await redhawkHelper.getHotelsByGeoCode({
         checkin: data.checkin,
         checkout: data.checkout,
-        residency: address?.country?.short_name?.toLowerCase() || 'us',
+        // residency: address?.country?.short_name?.toLowerCase() || 'us',
         currency:"EUR",
         guests:[
             {
@@ -42,7 +41,8 @@ const searchHotelsUsingGeoCode = async (data:HotelSearchRequest,user:JwtPayload)
         language:"en",
         latitude: destinationLatLong.lat,
         longitude: destinationLatLong.lng,
-        radius: 1000
+        radius: data.radius || 100,
+        star_rating: data.star_rating
     })
 
     const formattedHotels = HotelHelper.convertRawResponseToLocal(hotels.hotels)
@@ -161,9 +161,12 @@ const getRealtimePriceFromPrebook = async (book_hash:string)=>{
     if(!response) throw new ApiError(StatusCodes.NOT_FOUND, 'Hotel not found')
     
     const currentPrice = response.hotels[0]?.rates?.[0]
+    const total_price = currentPrice?.payment_options?.payment_types[0]?.recommended_price?.show_amount || currentPrice?.payment_options?.payment_types[0]?.show_amount
+    const priceBreakdown = HotelHelper.getPriceWithCharge(Number(total_price))
 
     const data= {
-        total_price:currentPrice?.payment_options?.payment_types[0]?.recommended_price?.show_amount || currentPrice?.payment_options?.payment_types[0]?.show_amount,
+        total_price:priceBreakdown.price.toFixed(2),
+        charge:priceBreakdown.charge,
         currency:currentPrice?.payment_options?.payment_types[0]?.recommended_price?.currency_code || currentPrice?.payment_options?.payment_types[0]?.currency_code,
         room_name:currentPrice?.room_name,
         book_hash:currentPrice?.book_hash,
@@ -180,32 +183,9 @@ const getRealtimePriceFromPrebook = async (book_hash:string)=>{
 const startTheBookingProcess = async (payload:IStartBookingRequest,user:JwtPayload)=>{
     const bookingResponse = await redhawkHelper.startTheBookingProcess(payload.booking_id,payload.book_hash)
 
-    const init_uuid = crypto.randomUUID();
-    const pay_uuid = crypto.randomUUID();
-    console.log(pay_uuid);
-    
-    const paymentRequest = {
-        object_id:bookingResponse?.item_id,
-        pay_uuid:pay_uuid,
-        init_uuid:init_uuid,
-        user_first_name:payload.first_name,
-        user_last_name:payload.last_name,
-        cvc:payload.cvc,
-        is_cvc_required:true,
-        credit_card_data_core:{
-            card_holder:payload.card_holder,
-            card_number:payload.card_number,
-            year:payload.expiry_year,
-            month:payload.expiry_month,
-        }
-    } 
-
-    const paymentResponse = await redhawkHelper.creditCardTokenizer(paymentRequest)
-
     const response = {
-        init_uuid,
-        pay_uuid,
-        payment_response:paymentResponse
+        booking_id:payload.booking_id,
+        
     }
 
     return response

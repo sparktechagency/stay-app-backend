@@ -11,8 +11,8 @@ export type HotelSearchRequest = {
   checkin: string;
   checkout: string;
   geusts: number;
-  lat: number;
-  lng: number;
+  star_rating?: number;
+  radius?: number;
 }
 
 export type HotelRateRequest = {
@@ -26,11 +26,5 @@ export type HotelRateRequest = {
 export type IStartBookingRequest = {
   booking_id: string;
   book_hash: string;
-  first_name: string;
-  last_name:string,
-  cvc: string;
-  card_number: string;
-  expiry_month: string;
-  expiry_year: string;
-  card_holder: string
+  guests:{first_name: string; last_name: string}[]
 }

@@ -1,7 +1,7 @@
  export interface HotelSearchRequest {
   checkin: string;   // YYYY-MM-DD
   checkout: string;  // YYYY-MM-DD
-  residency: string;
+  residency?: string;
   language: string;
   guests: Guest[];
   longitude: number;
@@ -9,6 +9,8 @@
   radius: number;
   currency: string;
   id?:string
+  star_rating?:number,
+  has_breakfast?:boolean
 }
 
  interface Guest {
