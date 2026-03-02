@@ -5,7 +5,7 @@ import sendResponse from '../../../shared/sendResponse';
 
 const searchHotelsUsingGeoCode = catchAsync(async (req: Request, res: Response) => {
     const data = req.body;
-    const result = await HotelServices.searchHotelsUsingGeoCode(data, req.user);
+    const result = await HotelServices.searchHotelsUsingGeoCode(data, req.user,{page:data?.page as any||1, limit: data?.limit as any||3});
     sendResponse(res, {
         statusCode: 200,
         success: true,
@@ -52,7 +52,7 @@ const getHotelRatesResponse = catchAsync(async (req: Request, res: Response) => 
 
 
 const chackRealPriceBeforeBook = catchAsync(async (req: Request, res: Response) => {
-    const result = await HotelServices.getRealtimePriceFromPrebook(req.query.book_hash as string);
+    const result = await HotelServices.getRealtimePriceFromPrebook(req.query.book_hash as string, req.query.booking_id as string);
     sendResponse(res, {
         statusCode: 200,
         success: true,

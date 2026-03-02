@@ -162,4 +162,5 @@ export interface IRateDataFormat {
   daily_prices: string[];
   meal: string;
   free_cancellation: string; // ISO date string
+  hotel_id: string;
 }

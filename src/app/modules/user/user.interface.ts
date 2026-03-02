@@ -7,7 +7,7 @@ export type IUser = {
   contact: string;
   email: string;
   password: string;
-  location: string;
+  address: string;
   image?: string;
   status: 'active' | 'delete';
   verified: boolean;

@@ -168,6 +168,7 @@ export interface PolicySection {
 
 export interface HotelDetailOutput {
   hotel: {
+    id: string;
     name: string;
     rating: number;
     location: {
@@ -204,4 +205,7 @@ export interface HotelDetailOutput {
     main?: string;
     gallery?: string[];
   };
+  all_amenities?: string[];
+  meta_policy?: string[];
+  extra_meta_policy?: string
 }

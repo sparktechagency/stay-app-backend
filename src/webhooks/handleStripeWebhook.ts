@@ -3,6 +3,7 @@ import stripe from "../config/stripe";
 import config from "../config";
 import { handlePurchaseCheckout } from "../handlers/handlePurchaseCheckout";
 import { handleSubscriptionCreated } from "../handlers/handleSubscriptionCreated";
+import { kafkaProducer } from "../tools/kafka/kafka-producers/kafka.producer";
 
 export const handleStripeWebhook = async (req: Request, res: Response) => {
     try {
@@ -12,7 +13,15 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
         switch (event.type) {
             case 'checkout.session.completed':
                 const session = event.data.object;
-                await handlePurchaseCheckout(session);
+                const isBooking = session.metadata?.bookingId ? true : false;
+                if(isBooking){
+                    await kafkaProducer.sendMessage('user',{
+                        type:'book-hotel',
+                        data:{
+                            session
+                        }
+                     })
+                }
                 break;
             case 'customer.subscription.created':
                 const subscription = event.data.object;

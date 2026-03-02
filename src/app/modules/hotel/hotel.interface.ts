@@ -13,12 +13,15 @@ export type HotelSearchRequest = {
   geusts: number;
   star_rating?: number;
   radius?: number;
+  page: number;
+  limit: number;
 }
 
 export type HotelRateRequest = {
   checkin: string;
   checkout: string;
   geusts: number;
+  childrens: number[]
   id: string;
 }
 

@@ -10,6 +10,8 @@ import { HotelRatesResponse } from '../types/redhawk/hotelHomePage';
 import ApiError from '../errors/ApiError';
 import { StatusCodes } from 'http-status-codes';
 import { PaymentRequest, StartBookingResponse } from '../types/redhawk/startBooking';
+import { CreateBookingRequest } from '../types/redhawk/bookingProcessFinish';
+import { RedisHelper } from '../tools/redis/redis.helper';
 
 class RedhawkHelper {
   private user_id: string = config.redhawk.user_id!;
@@ -41,7 +43,7 @@ class RedhawkHelper {
         },
       });
     } catch (error) {
-      console.log(error);
+      throw error;
     }
   }
 
@@ -57,7 +59,8 @@ class RedhawkHelper {
   
     
     const data: HotelSearchResponse = response?.data || {};
-
+ 
+    
     if (data.error) {
       throw new ApiError(StatusCodes.BAD_REQUEST, data.error as string);
     }
@@ -68,6 +71,8 @@ class RedhawkHelper {
   public async getHotelInformationUsingId(
     hotel_id: string,
   ): Promise<HotelData> {
+    const cache = await RedisHelper.redisGet('hotelInfo', {hotel_id});
+    if(cache) return cache
     const response = await this.requestHandler(
       `/api/b2b/v3/hotel/info`,
       'POST',
@@ -75,6 +80,10 @@ class RedhawkHelper {
       { id: hotel_id, language: 'en' },
     );
     const data = response?.data || {};
+    if (data.error) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, data.error as string);
+     }
+      await RedisHelper.redisSet('hotelInfo', data.data, {hotel_id}, 60 * 60 * 24);
     return data?.data;
   }
 
@@ -181,6 +190,34 @@ class RedhawkHelper {
     console.log(data);
     
     if(data.status === 'error') {
+      console.log(data);
+      
+      throw new ApiError(StatusCodes.BAD_REQUEST, data.error as string);
+    }
+    return data?.status || '';
+  }
+
+  async confirmBooking(payload:CreateBookingRequest): Promise<any> {
+    try {
+        const response = await this.requestHandler('/api/b2b/v3/hotel/order/booking/finish/', 'POST', {}, payload);
+    const data = (response?.data || {})
+    if(data.error) {
+      console.log(data);
+      
+      throw new ApiError(StatusCodes.BAD_REQUEST, data.error as string);
+    }
+    return data?.status || '';
+    } catch (error:any) {
+      console.log(error.response?.data);
+      throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, error.response?.data?.error || 'An error occurred while confirming the booking');
+      
+    }
+  }
+
+  async cancelBooking(booking_id: string):Promise<any> {
+    const response = await this.requestHandler(`/api/b2b/v3/hotel/order/cancel`, 'POST', {}, { partner_order_id: booking_id });
+    const data = (response?.data || {})
+    if(data.error) {
       console.log(data);
       
       throw new ApiError(StatusCodes.BAD_REQUEST, data.error as string);

@@ -11,6 +11,7 @@ import requestIp from 'request-ip';
 import { handleChunkUpload } from './helpers/handleChunkUpload';
 import { fileStreamHandler } from './helpers/fileStreamingHelper';
 import { handleStripeWebhook } from './webhooks/handleStripeWebhook';
+import { etgWebhookHandler } from './webhooks/handleEtgWebhook';
 const app = express();
 app.post("/api/stripe/webhook",express.raw({type:"application/json"}),handleStripeWebhook); /// stripe webhook
 const limiter = rateLimit({
@@ -45,7 +46,7 @@ app.use(Morgan.errorHandler);
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
+app.post('/api/etg/webhook',etgWebhookHandler)
 //file retrieve
 app.use("/files/:folder/:file",fileStreamHandler);
 // app.use(express.static('uploads'));

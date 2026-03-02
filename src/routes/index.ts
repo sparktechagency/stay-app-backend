@@ -7,6 +7,8 @@ import { SubscriptionRoutes } from '../app/modules/subscription/subscription.rou
 import { SavedRoutes } from '../app/modules/saved/saved.route';
 import { DisclaimerRoutes } from '../app/modules/disclaimer/disclaimer.route';
 import { FaqRoutes } from '../app/modules/faq/faq.route';
+import { BookingRoutes } from '../app/modules/booking/booking.route';
+import { ReviewRoutes } from '../app/modules/review/review.route';
 const router = express.Router();
 
 const apiRoutes = [
@@ -41,6 +43,14 @@ const apiRoutes = [
   {
     path:"/faq",
     route:FaqRoutes
+  },
+  {
+    path:"/booking",
+    route:BookingRoutes
+  },
+  {
+    path:"/review",
+    route:ReviewRoutes
   }
 ];
 

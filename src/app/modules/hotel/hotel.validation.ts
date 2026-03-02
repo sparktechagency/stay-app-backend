@@ -4,23 +4,23 @@ import { z } from 'zod';
 const searchHotelsUsingGeoCodeZodSchema = z.object({
   body: z
     .object({
-      destination: z.string().min(2, 'Destination is required'),
+      destination: z.string().min(2, 'Destination is required').optional(),
 
       checkin: z
         .string()
         .regex(
           /^\d{4}-\d{2}-\d{2}$/,
           'Invalid check-in date format (YYYY-MM-DD)',
-        ),
+        ).optional(),
 
       checkout: z
         .string()
         .regex(
           /^\d{4}-\d{2}-\d{2}$/,
           'Invalid check-out date format (YYYY-MM-DD)',
-        ),
+        ).optional(),
 
-      geusts: z.number().int().min(1, 'At least 1 guest is required'),
+      geusts: z.number().int().min(1, 'At least 1 guest is required').optional(),
       star_rating: z.number().int().min(1).max(5).optional(),
       radius: z.number().optional(),
       // lat: z
@@ -33,7 +33,7 @@ const searchHotelsUsingGeoCodeZodSchema = z.object({
       //   .min(-180)
       //   .max(180),
     })
-    .refine(data => new Date(data.checkout) > new Date(data.checkin), {
+    .refine(data =>(!data?.checkin || !data?.checkout) || new Date(data?.checkout ) > new Date(data?.checkin), {
       message: 'Checkout date must be after check-in date',
       path: ['checkout'],
     }),
@@ -51,12 +51,14 @@ const getHotelRatesZodSchema = z.object({
     checkin: z.string({ required_error: 'Checkin is required' }),
     checkout: z.string({ required_error: 'Checkout is required' }),
     geusts: z.number({ required_error: 'Guests is required' }),
+    childrens: z.array(z.number()).optional(),
   }),
 });
 
 const preBookPriceZodSchema = z.object({
   query: z.object({
     book_hash: z.string({ required_error: 'Book hash is required' }),
+    booking_id: z.string({ required_error: 'Booking id is required' }),
   }),
 });
 
