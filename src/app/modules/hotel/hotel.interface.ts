@@ -15,6 +15,8 @@ export type HotelSearchRequest = {
   radius?: number;
   page: number;
   limit: number;
+  lat?: number;
+  lng?: number;
 }
 
 export type HotelRateRequest = {

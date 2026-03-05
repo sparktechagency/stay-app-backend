@@ -35,7 +35,14 @@ export interface PaymentType {
   is_need_cvc: boolean;
   type: string;
   vat_data: VatData;
-  tax_data: Record<string, unknown>;
+  tax_data: {
+    taxes: {
+      name: string;
+      included_by_supplier: boolean;
+      amount: string;
+      currency_code: string;
+    }[];
+  };
   perks: Record<string, unknown>;
   commission_info: CommissionInfo;
   cancellation_penalties: {

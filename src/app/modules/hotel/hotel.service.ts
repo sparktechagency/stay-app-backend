@@ -26,6 +26,9 @@ const searchHotelsUsingGeoCode = async (
 ) => {
   // const cache = await RedisHelper.redisGet('hotels', data);
   // if (cache) return cache;
+  const userInfo = await User.findById(user.id);
+  if (!userInfo) throw new ApiError(StatusCodes.NOT_FOUND, 'User not found');
+  const address = userInfo?.address ? await googleMapHelper.getAddressInfoUsingAddress(userInfo?.address) : data.lat? await googleMapHelper.getAddressUsingGeoCode(data.lat, data.lng!) : { country: { long_name: '', short_name: '' }, city: '', formated_address: '' };
 
   const destinationLatLong = await googleMapHelper.getGeoCodeUsingAddress(
     data?.destination || 'Dubai',
@@ -34,6 +37,7 @@ const searchHotelsUsingGeoCode = async (
   if (destinationLatLong.lat == 0 || destinationLatLong.lng == 0) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Destination not found');
   }
+
 
   // const cehcedData = await HotelHelper.getDataFromCacheGeoCode(
   //   destinationLatLong.lat,
@@ -60,7 +64,7 @@ const searchHotelsUsingGeoCode = async (
     hotels = await redhawkHelper.getHotelsByGeoCode({
       checkin: data?.checkin || new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0],
       checkout: data?.checkout || new Date(new Date().setDate(new Date().getDate() + 3)).toISOString().split('T')[0],
-      // residency: address?.country?.short_name?.toLowerCase() || 'us',
+      residency: address?.country?.short_name?.toLowerCase() || 'us',
       currency: 'EUR',
       guests: [
         {
@@ -221,7 +225,7 @@ const getRealtimePriceFromPrebook = async (
   book_hash: string,
   booking_id: string,
 ) => {
-  const cache = await RedisHelper.redisGet('hotels:realtime', { book_hash });
+  const cache = await RedisHelper.redisGet('hotels:realtime', { book_hash: booking_id });
   if (cache) return cache;
   const response = await redhawkHelper.chackRealPriceBeforeBook(book_hash);
 
@@ -237,6 +241,7 @@ const getRealtimePriceFromPrebook = async (
   const data = {
     total_price: priceBreakdown.price.toFixed(2),
     charge: priceBreakdown.charge,
+    tax_data: currentPrice?.payment_options?.payment_types[0]?.tax_data?.taxes?.filter(item=>!item.included_by_supplier),
     currency:
       currentPrice?.payment_options?.payment_types[0]?.recommended_price
         ?.currency_code ||

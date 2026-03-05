@@ -54,6 +54,18 @@ class GoogleMapHelper {
     }
   }
 
+  async getAddressInfoUsingAddress(address: string):Promise<{
+    country: {
+        long_name: string
+        short_name: string
+    };
+    city: string;
+    formated_address: string;
+  }> {
+    const geoCode = await this.getGeoCodeUsingAddress(address);
+    return this.getAddressUsingGeoCode(geoCode.lat, geoCode.lng);
+  }
+
   async getGeoCodeUsingAddress(address: string) {
     try {
       const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${address}&key=${this.api_key}`;
