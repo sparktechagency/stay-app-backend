@@ -109,9 +109,9 @@ async function run() {
   });
 
   // ensure deterministic port allocation for new modules
-  const excludeMods = ['resettoken']
+  const excludeMods = ['auth','booking','hotel']
   modules.forEach(mod => {
-    if(excludeMods.includes(mod)) return
+    if(!excludeMods.includes(mod)) return
     const svcName = `${mod}-service`;
     if (!findServiceInCompose(compose, svcName)) {
       // assign port: reuse if exists in modulePorts else find next available
