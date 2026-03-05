@@ -1,6 +1,6 @@
 services:
   kong:
-    image: kong # specific version recommended instead of latest
+    image: kong
     container_name: kong
     environment:
       KONG_DATABASE: "off"
@@ -15,7 +15,7 @@ services:
       - ./kong.yaml:/etc/kong/kong.yml:ro
     ports:
       - "${IP_ADDRESS}:${PORT}:8000"
-      - "10.10.7.9:8001:8001"
+      - "${IP_ADDRESS}:8001:8001"
     networks:
       - template-network
 
@@ -27,43 +27,46 @@ services:
       - kong
     networks:
       - template-network
+
   default-service:
     build: .
     environment:
-      - PORT=5044
-      - IP_ADDRESS=0.0.0.0
-      - DATABASE_URL=mongodb://root:1@mongo:27017/embay/?authSource=admin
-      - BACKUP_DATABASE_URL=mongodb://mongo:27017/embay
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - KAFKA_URL=kafka:9092
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
-      
-    networks:
-      - template-network
+      PORT: 5044
+      IP_ADDRESS: 0.0.0.0
+      DATABASE_URL: mongodb://root:1@mongo:27017/stay?authSource=admin
+      BACKUP_DATABASE_URL: mongodb://mongo:27017/stay
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_URL: kafka:9092
+      ELASTICSEARCH_URL: http://elasticsearch:9200
     ports:
-      - '5044:5044'
+      - "5044:5044"
     volumes:
       - shared-data:/app/uploads
+    networks:
+      - template-network
+
   asset-service:
     build: .
     environment:
-      - PORT=5043
-      - IP_ADDRESS=0.0.0.0
-      - DATABASE_URL=mongodb://root:1@mongo:27017/embay?authSource=admin
-      - BACKUP_DATABASE_URL=mongodb://mongo:27017/embay
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - KAFKA_URL=kafka:9092
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
-    networks:
-      - template-network
+      PORT: 5043
+      IP_ADDRESS: 0.0.0.0
+      DATABASE_URL: mongodb://root:1@mongo:27017/stay?authSource=admin
+      BACKUP_DATABASE_URL: mongodb://mongo:27017/stay
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_URL: kafka:9092
+      ELASTICSEARCH_URL: http://elasticsearch:9200
     ports:
-      - '5043:5043'
+      - "5043:5043"
     volumes:
       - shared-data:/app/uploads
+    networks:
+      - template-network
+
 volumes:
   shared-data: null
+
 networks:
   template-network:
     external: true
