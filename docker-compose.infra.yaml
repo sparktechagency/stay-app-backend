@@ -24,16 +24,20 @@ services:
       - template-network
 
   mongo:
-    image: mongo
+    image: mongo:6
     ports:
-      - 27018:27017
+    - "27018:27017"
     volumes:
-      - mongo_data:/data/db
-    networks:
-      - template-network
+    - mongo_data:/data/db
+    - ./mongo-keyfile:/etc/mongo-keyfile
+    command: >
+      bash -c "
+      chmod 400 /etc/mongo-keyfile &&
+      mongod --replSet rs0 --bind_ip_all --keyFile /etc/mongo-keyfile
+      "
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=root
-      - MONGO_INITDB_ROOT_PASSWORD=1
+    - MONGO_INITDB_ROOT_USERNAME=root
+    - MONGO_INITDB_ROOT_PASSWORD=1
 
   mongo-express:
     image: mongo-express

@@ -14,6 +14,8 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
             case 'checkout.session.completed':
                 const session = event.data.object;
                 const isBooking = session.metadata?.bookingId ? true : false;
+                console.log(isBooking);
+                
                 if(isBooking){
                     await kafkaProducer.sendMessage('user',{
                         type:'book-hotel',
@@ -30,6 +32,8 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
             default:
                 console.log(`Unhandled event type ${event.type}`);
         }
+
+        res.sendStatus(200);    
     } catch (error) {
         console.log(error);
         
