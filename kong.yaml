@@ -18,4 +18,30 @@ services:
         protocols:
           - http
           - https
- 
+  - name: auth-service
+    url: http://auth-service:5656/api/v1/auth
+    routes:
+      - name: auth-route
+        paths:
+          - /api/v1/auth
+        protocols:
+          - http
+          - https
+  - name: booking-service
+    url: http://booking-service:5991/api/v1/booking
+    routes:
+      - name: booking-route
+        paths:
+          - /api/v1/booking
+        protocols:
+          - http
+          - https
+  - name: hotel-service
+    url: http://hotel-service:5515/api/v1/hotel
+    routes:
+      - name: hotel-route
+        paths:
+          - /api/v1/hotel
+        protocols:
+          - http
+          - https

@@ -3,22 +3,21 @@ services:
     image: kong
     container_name: kong
     environment:
-      KONG_DATABASE: "off"
+      KONG_DATABASE: 'off'
       KONG_DECLARATIVE_CONFIG: /etc/kong/kong.yml
       KONG_PROXY_ACCESS_LOG: /dev/stdout
       KONG_ADMIN_ACCESS_LOG: /dev/stdout
       KONG_PROXY_ERROR_LOG: /dev/stderr
       KONG_ADMIN_ERROR_LOG: /dev/stderr
-      KONG_NGINX_WORKER_PROCESSES: "auto"
-      KONG_NGINX_WORKER_CONNECTIONS: "4096"
+      KONG_NGINX_WORKER_PROCESSES: auto
+      KONG_NGINX_WORKER_CONNECTIONS: '4096'
     volumes:
       - ./kong.yaml:/etc/kong/kong.yml:ro
     ports:
-      - "${IP_ADDRESS}:${PORT}:8000"
-      - "${IP_ADDRESS}:8001:8001"
+      - ${IP_ADDRESS}:${PORT}:8000
+      - ${IP_ADDRESS}:8001:8001
     networks:
       - template-network
-
   kong-keepalive:
     build:
       context: .
@@ -27,7 +26,6 @@ services:
       - kong
     networks:
       - template-network
-
   default-service:
     build: .
     environment:
@@ -40,12 +38,11 @@ services:
       KAFKA_URL: kafka:9092
       ELASTICSEARCH_URL: http://elasticsearch:9200
     ports:
-      - "5044:5044"
+      - '5044:5044'
     volumes:
       - shared-data:/app/uploads
     networks:
       - template-network
-
   asset-service:
     build: .
     environment:
@@ -58,15 +55,58 @@ services:
       KAFKA_URL: kafka:9092
       ELASTICSEARCH_URL: http://elasticsearch:9200
     ports:
-      - "5043:5043"
+      - '5043:5043'
     volumes:
       - shared-data:/app/uploads
     networks:
       - template-network
-
+  auth-service:
+    build: .
+    ports:
+      - '5656:5656'
+    environment:
+      - PORT=5656
+      - DATABASE_URL=mongodb://187.77.173.240:27017/stay?authSource=admin
+      - BACKUP_DATABASE_URL=mongodb://mongo:27017/stay
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_URL=kafka:9092
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - IP_ADDRESS=0.0.0.0
+    networks:
+      - template-network
+  booking-service:
+    build: .
+    ports:
+      - '5991:5991'
+    environment:
+      - PORT=5991
+      - DATABASE_URL=mongodb://187.77.173.240:27017/stay?authSource=admin
+      - BACKUP_DATABASE_URL=mongodb://mongo:27017/stay
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_URL=kafka:9092
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - IP_ADDRESS=0.0.0.0
+    networks:
+      - template-network
+  hotel-service:
+    build: .
+    ports:
+      - '5515:5515'
+    environment:
+      - PORT=5515
+      - DATABASE_URL=mongodb://187.77.173.240:27017/stay?authSource=admin
+      - BACKUP_DATABASE_URL=mongodb://mongo:27017/stay
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_URL=kafka:9092
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - IP_ADDRESS=0.0.0.0
+    networks:
+      - template-network
 volumes:
   shared-data: null
-
 networks:
   template-network:
     external: true
