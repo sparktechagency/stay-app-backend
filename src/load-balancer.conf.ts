@@ -127,7 +127,7 @@ async function run() {
         ports: [`${port}:${port}`],
         environment: [
           `PORT=${port}`,
-          `DATABASE_URL=mongodb://root:1@mongo:27017/stay?authSource=admin&replicaSet=rs0`,
+          `DATABASE_URL=mongodb://187.77.173.240:27017/stay?authSource=admin`,
           `BACKUP_DATABASE_URL=mongodb://mongo:27017/stay`,
           `REDIS_HOST=redis`,
           `REDIS_PORT=6379`,
