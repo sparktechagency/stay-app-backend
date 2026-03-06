@@ -44,9 +44,7 @@ services:
     ports:
     - 8085:8081
     environment:
-      ME_CONFIG_MONGODB_SERVER: mongo
-      ME_CONFIG_MONGODB_ADMINUSERNAME: root
-      ME_CONFIG_MONGODB_ADMINPASSWORD: 1
+      ME_CONFIG_MONGODB_URL: "mongodb://root:1@mongo:27017/?authSource=admin&replicaSet=rs0"
       ME_CONFIG_BASICAUTH_ENABLED: true
       ME_CONFIG_BASICAUTH_USERNAME: root
       ME_CONFIG_BASICAUTH_PASSWORD: 1
